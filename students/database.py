@@ -1,12 +1,10 @@
 import libsql_experimental as libsql
 import os
 
-# Получаем данные для подключения из переменных окружения
 DB_URL = os.getenv("TURSO_DATABASE_URL")
 DB_TOKEN = os.getenv("TURSO_AUTH_TOKEN")
 
 def _get_conn():
-    """Создаёт подключение к Turso, используя URL и токен."""
     return libsql.connect(database=DB_URL, auth_token=DB_TOKEN)
 
 async def init_db():
