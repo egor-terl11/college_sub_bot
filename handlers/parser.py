@@ -3,6 +3,7 @@ from bs4 import BeautifulSoup
 import hashlib
 import json
 import os
+import re
 
 DAY_IDS = {
     "monday": 169,
@@ -97,3 +98,6 @@ async def check_all_days():
 
     save_hash(new_hashes)
     return all_replacements
+
+def normalize_group(s: str) -> str:
+    return re.sub(r'[^A-Za-zА-Яа-я0-9]', '', s).upper()
