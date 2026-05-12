@@ -1,89 +1,50 @@
-import os
-import aiohttp
+import aiosqlite
 
-TURSO_DATABASE_URL = os.getenv("TURSO_DATABASE_URL")
-TURSO_AUTH_TOKEN = os.getenv("TURSO_AUTH_TOKEN")
-BASE_URL = TURSO_DATABASE_URL.replace("libsql://", "https://") + "/v2/pipeline"
-
-async def _execute_sql(sql, params=None):
-    """
-    Выполняет SQL-запрос через HTTP API Turso.
-    params: список python-значений (int, str), автоматически преобразуются
-            в формат, требуемый Turso.
-    """
-    args = []
-    if params:
-        for p in params:
-            if isinstance(p, bool):
-                args.append({"type": "integer", "value": "1" if p else "0"})
-            elif isinstance(p, int):
-                args.append({"type": "integer", "value": str(p)})
-            elif isinstance(p, float):
-                args.append({"type": "float", "value": str(p)})
-            else:
-                args.append({"type": "text", "value": str(p)})
-    else:
-        args = []
-
-    async with aiohttp.ClientSession() as session:
-        headers = {
-            "Authorization": f"Bearer {TURSO_AUTH_TOKEN}",
-            "Content-Type": "application/json"
-        }
-        payload = {
-            "requests": [
-                {
-                    "type": "execute",
-                    "stmt": {
-                        "sql": sql,
-                        "args": args
-                    }
-                }
-            ]
-        }
-        async with session.post(BASE_URL, json=payload, headers=headers) as resp:
-            if resp.status != 200:
-                raise Exception(f"Turso API error: {resp.status} {await resp.text()}")
-            return await resp.json()
-
-async def _fetch_one(sql, params=None):
-    res = await _execute_sql(sql, params)
-    try:
-        rows = res["results"][0]["response"]["result"]["rows"]
-        return rows[0] if rows else None
-    except (KeyError, IndexError):
-        return None
+DB_NAME = "students.sql"
 
 async def init_db():
-    await _execute_sql("""
-        CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY,
-            name TEXT NOT NULL,
-            group_name TEXT NOT NULL
-        )
-    """)
+    async with aiosqlite.connect(DB_NAME) as db:
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS users (
+                id INTEGER PRIMARY KEY,
+                name TEXT NOT NULL,
+                group_name TEXT NOT NULL
+            )
+        """)
+        await db.commit()
 
 async def create_user(id, name, group):
-    await _execute_sql(
-        "INSERT INTO users (id, name, group_name) VALUES (?, ?, ?)",
-        [id, name, group]
-    )
+    async with aiosqlite.connect(DB_NAME) as db:
+        await db.execute(
+            "INSERT INTO users (id, name, group_name) VALUES(?, ?, ?)",
+            (id, name, group)
+        )
+        await db.commit()
 
 async def user_exists(id: int):
-    row = await _fetch_one("SELECT 1 FROM users WHERE id = ?", [id])
-    return row is not None
+    async with aiosqlite.connect(DB_NAME) as db:
+        async with db.execute("SELECT 1 FROM users WHERE id = ?", (id,)) as cursor:
+            row = await cursor.fetchone()
+            return row is not None
 
 async def get_user(id: int):
-    row = await _fetch_one("SELECT name, group_name FROM users WHERE id = ?", [id])
-    if row:
-        return {
-            "name": row[0]["value"],
-            "group": row[1]["value"]
-        }
-    return None
+    async with aiosqlite.connect(DB_NAME) as db:
+        db.row_factory = aiosqlite.Row
+        cursor = await db.execute(
+            "SELECT name, group_name FROM users WHERE id = ?", (id,)
+        )
+        row = await cursor.fetchone()
+        if row:
+            return {
+                "name": row["name"],
+                "group": row["group_name"]
+            }
+        return None
 
 async def change_group(id: int, new_group: str):
-    await _execute_sql(
-        "UPDATE users SET group_name = ? WHERE id = ?",
-        [new_group, id]
-    )
+    async with aiosqlite.connect(DB_NAME) as db:
+        await db.execute(
+            "UPDATE users SET group_name = ? WHERE id = ?",
+            (new_group, id)
+        )
+        await db.commit()
