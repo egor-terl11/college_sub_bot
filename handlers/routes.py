@@ -48,11 +48,7 @@ async def anket(message: Message):
 
 @router.message(Command("help"))
 async def helpage(message: Message):
-    await message.answer("Бот для получения переносов колледжа\nМеню:")
-
-@router.message(Command("menu"))
-async def menu(message: Message):
-    await message.answer(f"")
+    await message.answer("Бот для получения переносов колледжа")
 
 @router.message(Command("change"))
 async def changes(message: Message):
