@@ -1,26 +1,13 @@
+from aiogram import Dispatcher, Bot, Router
 import asyncio
-import os
-import threading
-
-from aiogram import Bot, Dispatcher
-from flask import Flask
+from os import getenv
 from dotenv import load_dotenv
 
 from handlers.routes import router as main_router
 from students.database import init_db
 
 load_dotenv()
-TOKEN = os.getenv("BOT_TOKEN")
-
-app = Flask(__name__)
-
-@app.route('/')
-def home():
-    return "Я жив!"
-
-def run_flask():
-    port = int(os.getenv("PORT", 5000))
-    app.run(host="0.0.0.0", port=port, debug=False)
+TOKEN = getenv("BOT_TOKEN")
 
 dp = Dispatcher()
 dp.include_router(main_router)
@@ -31,5 +18,4 @@ async def main():
     await dp.start_polling(bot)
 
 if __name__ == '__main__':
-    threading.Thread(target=run_flask, daemon=True).start()
     asyncio.run(main())
