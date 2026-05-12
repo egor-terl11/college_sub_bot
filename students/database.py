@@ -6,7 +6,25 @@ TURSO_AUTH_TOKEN = os.getenv("TURSO_AUTH_TOKEN")
 BASE_URL = TURSO_DATABASE_URL.replace("libsql://", "https://") + "/v2/pipeline"
 
 async def _execute_sql(sql, params=None):
-    """Выполняет SQL-запрос через HTTP API Turso."""
+    """
+    Выполняет SQL-запрос через HTTP API Turso.
+    params: список python-значений (int, str), автоматически преобразуются
+            в формат, требуемый Turso.
+    """
+    args = []
+    if params:
+        for p in params:
+            if isinstance(p, bool):
+                args.append({"type": "integer", "value": "1" if p else "0"})
+            elif isinstance(p, int):
+                args.append({"type": "integer", "value": str(p)})
+            elif isinstance(p, float):
+                args.append({"type": "float", "value": str(p)})
+            else:
+                args.append({"type": "text", "value": str(p)})
+    else:
+        args = []
+
     async with aiohttp.ClientSession() as session:
         headers = {
             "Authorization": f"Bearer {TURSO_AUTH_TOKEN}",
@@ -18,7 +36,7 @@ async def _execute_sql(sql, params=None):
                     "type": "execute",
                     "stmt": {
                         "sql": sql,
-                        "args": params if params else []
+                        "args": args
                     }
                 }
             ]
