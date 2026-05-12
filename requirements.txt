@@ -34,7 +34,6 @@ jeepney==0.8.0
 Jinja2==3.1.6
 jsonschema==4.17.3
 keyring==23.13.1
-libsql-experimental==0.0.55
 lockfile==0.12.2
 magic-filter==1.0.12
 MarkupSafe==3.0.3
@@ -74,4 +73,3 @@ webencodings==0.5.1
 Werkzeug==3.1.8
 yarl==1.23.0
 zipp==3.15.0
-
