@@ -12,15 +12,15 @@ async def _execute_sql(sql, params=None):
             "Authorization": f"Bearer {TURSO_AUTH_TOKEN}",
             "Content-Type": "application/json"
         }
-        if params:
-            for p in params:
-                if isinstance(p, str):
-                    sql = sql.replace("?", f"'{p}'", 1)
-                else:
-                    sql = sql.replace("?", str(p), 1)
         payload = {
             "requests": [
-                {"type": "execute", "stmt": sql}
+                {
+                    "type": "execute",
+                    "stmt": {
+                        "sql": sql,
+                        "args": params if params else []
+                    }
+                }
             ]
         }
         async with session.post(BASE_URL, json=payload, headers=headers) as resp:
@@ -36,9 +36,6 @@ async def _fetch_one(sql, params=None):
     except (KeyError, IndexError):
         return None
 
-async def _execute_insert(sql, params=None):
-    await _execute_sql(sql, params)
-
 async def init_db():
     await _execute_sql("""
         CREATE TABLE IF NOT EXISTS users (
@@ -49,9 +46,9 @@ async def init_db():
     """)
 
 async def create_user(id, name, group):
-    await _execute_insert(
-        "INSERT INTO users (id, name, group_name) VALUES(?, ?, ?)",
-        (id, name, group)
+    await _execute_sql(
+        "INSERT INTO users (id, name, group_name) VALUES (?, ?, ?)",
+        [id, name, group]
     )
 
 async def user_exists(id: int):
@@ -68,7 +65,7 @@ async def get_user(id: int):
     return None
 
 async def change_group(id: int, new_group: str):
-    await _execute_insert(
+    await _execute_sql(
         "UPDATE users SET group_name = ? WHERE id = ?",
-        (new_group, id)
+        [new_group, id]
     )
