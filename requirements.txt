@@ -2,5 +2,4 @@ aiogram
 aiohttp
 beautifulsoup4
 python-dotenv
-flask
-gunicorn
+aiosqlite
